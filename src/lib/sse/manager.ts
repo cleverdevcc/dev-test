@@ -1,16 +1,5 @@
-/*
-  Centralized Server-Sent Events (SSE) manager
-  -------------------------------------------
-  Keeps track of connected clients and exposes helper functions
-  to push named events with JSON payloads to one or many clients.
-*/
 
-// NOTE: We purposely keep the type loose here because `WritableStreamDefaultWriter` is
-//       overloaded differently in Node.js & Edge runtimes. We only rely on the `.write` & `.close` APIs.
-// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export type ClientWriter = WritableStreamDefaultWriter<any>;
-
-// Re-use the same client registry across hot-reloads in development to prevent leaks.
 const globalWithSSE = globalThis as typeof globalThis & {
   __SSE_CLIENTS__?: Map<string, Set<ClientWriter>>;
 };
@@ -24,8 +13,6 @@ const clientRegistry = globalWithSSE.__SSE_CLIENTS__!;
 const textEncoder = new TextEncoder();
 
 function formatEvent(eventName: string, payload: unknown): Uint8Array {
-  // SSE format: each event is separated by a blank line
-  // We stringify payload once to avoid implicit conversions.
   const data = JSON.stringify(payload ?? {});
   return textEncoder.encode(`event: ${eventName}\ndata: ${data}\n\n`);
 }
@@ -55,6 +42,7 @@ export class SSEManager {
     if (writers.size === 0) {
       clientRegistry.delete(clientId);
     }
+    console.log("[SSE] Removed client", clientId);
   }
 
   /**
